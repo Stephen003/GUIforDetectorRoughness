@@ -82,7 +82,7 @@ class windowImg(QWidget):
     def initSlot(self):
 # 按钮连接对应函数
         QtCore.QObject.connect(self.btnOpenCamera, QtCore.SIGNAL('clicked()'), self.openCamera)
-        QtCore.QObject.connect(self.timerCamera, QtCore.SIGNAL('clicked()'), self.showCamera)
+        QtCore.QObject.connect(self.timerCamera, QtCore.SIGNAL('timeout()'), self.showCamera)
         QtCore.QObject.connect(self.btnOpenImage, QtCore.SIGNAL('clicked()'), self.imgRead)
         QtCore.QObject.connect(self.btnBinary, QtCore.SIGNAL('clicked()'), self.imgToBinary)
         QtCore.QObject.connect(self.btnEdge, QtCore.SIGNAL('clicked()'), self.imgToEdge)

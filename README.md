@@ -2,4 +2,4 @@
 
 2021/02/22
 
-摄像头读取不出。对于camera.py, line 117 frame读取不到
+摄像头读取不出。对于camera.py, line 117 frame读取不到为NoneType
