@@ -2,15 +2,14 @@ from cv2 import cv2
 import numpy as np
 import sys
 import re
-import os
 
 from PySide2.QtWidgets import QFileDialog, QApplication, QDialog, QMainWindow, QPushButton, QPlainTextEdit, QLabel, QVBoxLayout, QWidget, QGridLayout, QLineEdit, QMessageBox
 from PySide2.QtGui import QImage, QPixmap
 from PySide2 import QtCore
 
-class windowImg(QWidget):
-    def __init__(self, parent=None):
-        super(windowImg, self).__init__(parent)
+class windowImg(QDialog):
+    def __init__(self):
+        super().__init__()
         
         self.timerCamera = QtCore.QTimer()  # 定时器
         self.cap = cv2.VideoCapture()  # 摄像头
@@ -118,17 +117,6 @@ class windowImg(QWidget):
         x, y = frame.shape[0:2]
         self.img = cv2.resize(frame, (int(y/4), int(x/4)))
         self.imgShow(self.img, self.labelOrigin)
-        
-        # flag, self.image = self.cap.read()
-        # # face = self.face_detect.align(self.image)
-        # # if face:
-        # #     pass
-        # show = cv2.resize(self.image, (640, 480))
-        # show = cv2.cvtColor(show, cv2.COLOR_BGR2RGB)
-        # # print(show.shape[1], show.shape[0])
-        # # show.shape[1] = 640, show.shape[0] = 480
-        # showImage = QtGui.QImage(show.data, show.shape[1], show.shape[0], QtGui.QImage.Format_RGB888)
-        # self.labelOrigin.setPixmap(QtGui.QPixmap.fromImage(showImage))
 
 # 读取图片程序
     def imgRead(self, filename):
@@ -191,7 +179,7 @@ class windowImg(QWidget):
         if msg.exec_() == QMessageBox.RejectRole:
             event.ignore()
         else:
-            if self.flagCamera and self.cap.isOpened():
+            if self.flagCamera and self.cap.isOpen():
                 self.cap.release()
             if self.timerCamera.isActive():
                 self.timerCamera.stop()
@@ -200,7 +188,7 @@ class windowImg(QWidget):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QApplication()
     win = windowImg()
     win.show()
     sys.exit(app.exec_())
