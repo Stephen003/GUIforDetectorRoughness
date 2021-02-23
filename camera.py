@@ -13,9 +13,10 @@ class windowImg(QWidget):
         super(windowImg, self).__init__(parent)
         
         self.timerCamera = QtCore.QTimer()  # 定时器
-        self.cap = cv2.VideoCapture()  # 摄像头
         self.CAM_NUM = 0
-        
+        self.cap = cv2.VideoCapture(self.CAM_NUM + cv2.CAP_DSHOW)  # 摄像头  
+            # CAP_DSHOW作为调用的一部分传递标记，微软特有的。解决了程序第一次打开摄像头正常，之后再次打开无法显示，并有警告"[ WARN:0] videoio(MSMF): can't grab frame. Error: -2147483638"
+            #  https://blog.csdn.net/root__yang/article/details/83180822   
         self.initUI()
         self.initSlot()
         
@@ -100,7 +101,7 @@ class windowImg(QWidget):
 # 摄像头读取程序
     def openCamera(self):
         if self.timerCamera.isActive() == False:
-            flag = self.cap.open(self.CAM_NUM)
+            flag = self.cap.open(self.CAM_NUM + cv2.CAP_DSHOW)
             self.flagCamera = True
             if flag == False:
                 msg = QMessageBox.warning(self, u'Warning', u'请检测相机与电脑是否连接正确')
@@ -191,7 +192,7 @@ class windowImg(QWidget):
         if msg.exec_() == QMessageBox.RejectRole:
             event.ignore()
         else:
-            if self.flagCamera and self.cap.isOpened():
+            if self.cap.isOpened():
                 self.cap.release()
             if self.timerCamera.isActive():
                 self.timerCamera.stop()
