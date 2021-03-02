@@ -45,6 +45,8 @@ class windowImg(QWidget):
         self.btnEdge = QPushButton('边缘检测', self)
         self.btnEdgeLine = QPushButton('提取边缘线', self)
         self.btnMedianLine = QPushButton('提取中值线', self)
+        self.btnGetRoughness = QPushButton('计算粗糙度', self)
+
         self.btnQuit = QPushButton('退出', self)
         
         self.labelOrigin = QLabel()
@@ -58,6 +60,9 @@ class windowImg(QWidget):
         # self.textBinary.resize(80, 40)
         self.textEdge = QLineEdit(self)
         self.textEdge.setPlaceholderText("输入Canny参数")
+
+        self.textRoughnessRa = QLineEdit(self)
+        self.textRoughnessRa.setPlaceholderText("粗糙度Ra值")
         
 # 布局
         layout = QGridLayout(self)
@@ -73,10 +78,12 @@ class windowImg(QWidget):
         layout.addWidget(self.btnEdge, 1, 6, 1, 1)
         layout.addWidget(self.btnEdgeLine, 4, 2, 1, 1)
         layout.addWidget(self.btnMedianLine, 4, 4, 1, 1)
+        layout.addWidget(self.btnGetRoughness, 3, 6, 1, 1)
         layout.addWidget(self.btnQuit, 4, 6, 1, 1)
         
         layout.addWidget(self.textBinary, 1, 3, 1, 1)
         layout.addWidget(self.textEdge, 1, 5, 1, 1)
+        layout.addWidget(self.textRoughnessRa, 4, 5, 1, 1)
 
 
         
@@ -117,7 +124,7 @@ class windowImg(QWidget):
     def showCamera(self):
         flag, frame = self.cap.read()
         x, y = frame.shape[0:2]
-        self.img = cv2.resize(frame, (int(y/4), int(x/4)))
+        self.img = cv2.resize(frame, (int(y/2), int(x/2)))
         self.imgShow(self.img, self.labelOrigin)
         
         # flag, self.image = self.cap.read()
@@ -132,7 +139,7 @@ class windowImg(QWidget):
         # self.labelOrigin.setPixmap(QtGui.QPixmap.fromImage(showImage))
 
 # 读取图片程序
-    def imgRead(self, filename):
+    def imgRead(self):
         fileName, tmp = QFileDialog.getOpenFileName(self, 'Open Image', 'Image', 
                                                    '*.png *.jpg *.bmp')
         if fileName is '':
