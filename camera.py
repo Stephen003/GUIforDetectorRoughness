@@ -3,6 +3,8 @@ import numpy as np
 import sys
 import re
 import os
+from sklearn.linear_model import LinearRegression
+import math
 
 from PySide2.QtWidgets import QFileDialog, QApplication, QDialog, QMainWindow, QPushButton, QPlainTextEdit, QLabel, QVBoxLayout, QWidget, QGridLayout, QLineEdit, QMessageBox
 from PySide2.QtGui import QImage, QPixmap
@@ -50,10 +52,15 @@ class windowImg(QWidget):
         self.btnQuit = QPushButton('退出', self)
         
         self.labelOrigin = QLabel()
+        # self.labelOrigin.setFixedSize(320, 280)
         self.labelBinary = QLabel()
+        # self.labelBinary.setFixedSize(320, 280)
         self.labelEdge = QLabel()
+        # self.labelEdge.setFixedSize(320, 280)
         self.labelEdgeLine = QLabel()
+        # self.labelEdgeLine.setFixedSize(320, 280)
         self.labelMedianLine = QLabel()
+        # self.labelMedianLine.setFixedSize(320, 280)
         
         self.textBinary = QLineEdit(self)
         self.textBinary.setPlaceholderText("输入二值化阈值")
@@ -94,6 +101,10 @@ class windowImg(QWidget):
         QtCore.QObject.connect(self.btnOpenImage, QtCore.SIGNAL('clicked()'), self.imgRead)
         QtCore.QObject.connect(self.btnBinary, QtCore.SIGNAL('clicked()'), self.imgToBinary)
         QtCore.QObject.connect(self.btnEdge, QtCore.SIGNAL('clicked()'), self.imgToEdge)
+        QtCore.QObject.connect(self.btnEdgeLine, QtCore.SIGNAL('clicked()'), self.imgToEdgeLine)
+        QtCore.QObject.connect(self.btnMedianLine, QtCore.SIGNAL('clicked()'), self.imgGetMedianLine)
+        QtCore.QObject.connect(self.btnGetRoughness, QtCore.SIGNAL('clicked()'), self.getRoughness)
+
         QtCore.QObject.connect(self.btnQuit, QtCore.SIGNAL('clicked()'), self.close)
 
     '''this is the old style API老版本，会报错，但运行没问题
@@ -126,6 +137,13 @@ class windowImg(QWidget):
         x, y = frame.shape[0:2]
         self.img = cv2.resize(frame, (int(y/2), int(x/2)))
         self.imgShow(self.img, self.labelOrigin)
+
+        self.labelOrigin.setFixedSize(int(y/2), int(x/2))
+        self.labelBinary.setFixedSize(int(y/2), int(x/2))
+        self.labelEdge.setFixedSize(int(y/2), int(x/2))
+        self.labelEdgeLine.setFixedSize(int(y/2), int(x/2))
+        self.labelMedianLine.setFixedSize(int(y/2), int(x/2))
+
         
         # flag, self.image = self.cap.read()
         # # face = self.face_detect.align(self.image)
@@ -150,6 +168,12 @@ class windowImg(QWidget):
         x,y = img.shape[0:2]
         self.img = cv2.resize(img, (int(y/8), int(x/8)))
         self.imgShow(self.img, self.labelOrigin)
+
+        self.labelOrigin.setFixedSize(int(y/8), int(x/8))
+        self.labelBinary.setFixedSize(int(y/8), int(x/8))
+        self.labelEdge.setFixedSize(int(y/8), int(x/8))
+        self.labelEdgeLine.setFixedSize(int(y/8), int(x/8))
+        self.labelMedianLine.setFixedSize(int(y/8), int(x/8))
 
 # 图像显示在对应label上
     def imgShow(self, img, label):
@@ -182,11 +206,55 @@ class windowImg(QWidget):
         cannyParLow, cannyParHigh = re.findall(r"\d+", tmp)
         cannyParLow = int(cannyParLow)
         cannyParHigh = int(cannyParHigh)
-        self.imgEdge = cv2.Canny(self.imgGray, cannyParLow, cannyParHigh)
+
+        # 膨胀腐蚀处理，试去除多余无用点
+        kernel = np.ones((5,5), np.uint8)
+        imgErode = cv2.erode(self.imgGray, kernel, iterations=1)
+        imgErodeDilate = cv2.dilate(imgErode, kernel, iterations=3)
+        self.imgEdge = cv2.Canny(imgErodeDilate, cannyParLow, cannyParHigh)
         imgEdgeToRGB = self.to3Channel(self.imgEdge)
         self.imgShow(imgEdgeToRGB, self.labelEdge)
+
+    def imgToEdgeLine(self):
+        kernel = np.ones((3, 3), np.uint8)
+        dilate = cv2.dilate(self.imgEdge, kernel, iterations=1)  # 膨胀
+        num, self.imgEdgeLine = cv2.connectedComponents(dilate)  # 上下曲线，是上曲线的位置，k标为1，下曲线标为2
+        self.imgEdgeLine = self.imgEdgeLine.astype(np.uint8)  # 
+        [rows, columns] = self.imgEdgeLine.shape
+        for i in range(rows):
+            for j in range(columns):
+                if self.imgEdgeLine[i][j] == 2:
+                    self.imgEdgeLine[i][j] = 255
+                else:
+                    self.imgEdgeLine[i][j] = 0
+        self.imgEdgeLine = cv2.erode(self.imgEdgeLine, kernel, iterations=1)
+        imgEdgeLineToRGB = self.to3Channel(self.imgEdgeLine)
+        self.imgShow(imgEdgeLineToRGB, self.labelEdgeLine)
         
-    
+    def imgGetMedianLine(self):
+        self.imgMedianLine = self.imgEdgeLine
+        [rows, columns] = self.imgEdgeLine.shape
+        self.x, self.y = [], []
+        for i in range(rows):
+            for j in range(columns):
+                if self.imgEdgeLine[i][j] == 255:
+                    self.x.append(i)
+                    self.y.append(j)  # 提取出是下边缘曲线的(x, y)像素点坐标
+        self.lr = LinearRegression()
+        self.lr.fit(np.array(self.x).reshape(-1, 1), np.array(self.y))
+        for j in range(columns):
+            self.imgMedianLine[int((j-self.lr.intercept_)/self.lr.coef_), j] = 255  #得到中线斜率与偏差
+        imgMedianLineToRGB = self.to3Channel(self.imgMedianLine)
+        self.imgShow(imgMedianLineToRGB, self.labelMedianLine)
+
+    def getRoughness(self):
+        count, sumP = 0, 0
+        for i in range(0, len(self.x), 10):
+            sumP += abs(self.lr.coef_*self.x[i] + self.lr.intercept_ - self.y[i])/math.sqrt(pow(self.lr.coef_, 2) + 1)
+            count += 1
+        Ra = sumP / count 
+        self.textRoughnessRa.setPlaceholderText(str(Ra))
+
 # 退出按钮的处理
     def closeEvent(self, event):
         btnYes = QPushButton()
